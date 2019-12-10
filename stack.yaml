@@ -39,7 +39,12 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
+extra-deps:
+# - superrecord-0.5.0.1@sha256:ef0dd316eda7761da831071f729aec3373b44d223b818f9b078be9fba1378b95,2476
+# - record-0.4.2@sha256:146e7087ef12671a9b30aaad2d42fbfe5fff826437356d073367d06e9fcab2d7,1947
+# - basic-lens-0.0.2@sha256:11fc2a10bd2c956fc0700660a6a86b0eacbb3487b5d8cf603f97dcb7b0707d5c,911
+# - record-0.3.2.1@sha256:b5fd779d2f7f92e0c4bf5d5dbc87f6faf966a01bc94913553479ecb503e7a8c4,3555
+# - template-haskell-compat-v0208-0.1.1.1@sha256:bf9d8f535fdb0b7d47df60f78a886394e09a3db8aa1d760d310a2899a29e1d09,1587
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
