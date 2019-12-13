@@ -15,6 +15,7 @@ module Lib.Intcode
   , runUntil
   , runUntilHalted
   , newMachine
+  , isHalted
   )
 where
 
