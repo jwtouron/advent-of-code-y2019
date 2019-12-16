@@ -5,6 +5,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Lib.Intcode
   ( Input(..)
@@ -114,107 +117,120 @@ thawMachine = thawFreezeMachine V.thaw
 unsafeFreezeSTMachine :: STMachine s -> ST s Machine
 unsafeFreezeSTMachine = thawFreezeMachine V.unsafeFreeze
 
-data Parameter = Imm Int | Pos Int | Write Int | Rel Int deriving (Show)
+data ParameterRW = ParamRead | ParamWrite deriving (Show)
+data ParameterMode = ParamPos | ParamImm | ParamRel deriving (Show)
+data Parameter (a :: ParameterRW) = Param ParameterMode Int deriving (Show)
 
-data Instruction =
-    Add Parameter Parameter Parameter
-  | Mul Parameter Parameter Parameter
-  | Input Parameter
-  | Output Parameter
-  | JumpIfTrue Parameter Parameter
-  | JumpIfFalse Parameter Parameter
-  | LessThan Parameter Parameter Parameter
-  | Equals Parameter Parameter Parameter
-  | AdjustRelBase Parameter
-  | Halt
-  deriving (Show)
+data Instruction where
+  Add ::Parameter 'ParamRead -> Parameter 'ParamRead -> Parameter 'ParamWrite -> Instruction
+  Mul ::Parameter 'ParamRead -> Parameter 'ParamRead -> Parameter 'ParamWrite -> Instruction
+  Input ::Parameter 'ParamWrite -> Instruction
+  Output ::Parameter 'ParamRead -> Instruction
+  JumpIfTrue ::Parameter 'ParamRead -> Parameter 'ParamRead -> Instruction
+  JumpIfFalse ::Parameter 'ParamRead -> Parameter 'ParamRead -> Instruction
+  LessThan ::Parameter 'ParamRead -> Parameter 'ParamRead -> Parameter 'ParamWrite -> Instruction
+  Equals ::Parameter 'ParamRead -> Parameter 'ParamRead -> Parameter 'ParamWrite -> Instruction
+  AdjustRelBase ::Parameter 'ParamRead -> Instruction
+  Halt ::Instruction
+
+deriving instance (Show Instruction)
 
 decodeInstruction :: STMemory s -> Int -> ST s Instruction
 decodeInstruction mem index = do
   opcode <- MV.unsafeRead mem index
-  let [_, b, c, _, _] = zfill 5 $ show opcode
+  let [a, b, c, _, _] = zfill 5 $ show opcode
   case opcode `mod` 100 of
     1 ->
       Add
-        <$> (param c <$> MV.unsafeRead mem (index + 1))
-        <*> (param b <$> MV.unsafeRead mem (index + 2))
-        <*> (Write <$> MV.unsafeRead mem (index + 3))
+        <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
+        <*> (Param (param b) <$> MV.unsafeRead mem (index + 2))
+        <*> (Param (param a) <$> MV.unsafeRead mem (index + 3))
     2 ->
       Mul
-        <$> (param c <$> MV.unsafeRead mem (index + 1))
-        <*> (param b <$> MV.unsafeRead mem (index + 2))
-        <*> (Write <$> MV.unsafeRead mem (index + 3))
-    3 -> Input <$> (Write <$> MV.unsafeRead mem (index + 1))
-    4 -> Output <$> (param c <$> MV.unsafeRead mem (index + 1))
+        <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
+        <*> (Param (param b) <$> MV.unsafeRead mem (index + 2))
+        <*> (Param (param a) <$> MV.unsafeRead mem (index + 3))
+    3 -> Input <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
+    4 -> Output <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
     5 ->
       JumpIfTrue
-        <$> (param c <$> MV.unsafeRead mem (index + 1))
-        <*> (param b <$> MV.unsafeRead mem (index + 2))
+        <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
+        <*> (Param (param b) <$> MV.unsafeRead mem (index + 2))
     6 ->
       JumpIfFalse
-        <$> (param c <$> MV.unsafeRead mem (index + 1))
-        <*> (param b <$> MV.unsafeRead mem (index + 2))
+        <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
+        <*> (Param (param b) <$> MV.unsafeRead mem (index + 2))
     7 ->
       LessThan
-        <$> (param c <$> MV.unsafeRead mem (index + 1))
-        <*> (param b <$> MV.unsafeRead mem (index + 2))
-        <*> (Write <$> MV.unsafeRead mem (index + 3))
+        <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
+        <*> (Param (param b) <$> MV.unsafeRead mem (index + 2))
+        <*> (Param (param a) <$> MV.unsafeRead mem (index + 3))
     8 ->
       Equals
-        <$> (param c <$> MV.unsafeRead mem (index + 1))
-        <*> (param b <$> MV.unsafeRead mem (index + 2))
-        <*> (Write <$> MV.unsafeRead mem (index + 3))
-    9  -> AdjustRelBase <$> (param c <$> MV.unsafeRead mem (index + 1))
+        <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
+        <*> (Param (param b) <$> MV.unsafeRead mem (index + 2))
+        <*> (Param (param a) <$> MV.unsafeRead mem (index + 3))
+    9  -> AdjustRelBase <$> (Param (param c) <$> MV.unsafeRead mem (index + 1))
     99 -> return Halt
     _  -> error ("decodeInstruction: " ++ show (opcode `mod` 100))
  where
   zfill :: Int -> String -> String
   zfill n cs = reverse . take n . reverse $ replicate n '0' ++ cs
-  param :: Char -> Int -> Parameter
-  param '0' = Pos
-  param '1' = Imm
-  param '2' = Rel
+  param :: Char -> ParameterMode
+  param '0' = ParamPos
+  param '1' = ParamImm
+  param '2' = ParamRel
   param _   = error "param"
 
-paramValue :: STMachine s -> Parameter -> ST s Int
-paramValue _       (Imm   n) = return n
-paramValue machine (Pos   n) = MV.unsafeRead (machine ^. memory) n
-paramValue _       (Write n) = return n
-paramValue machine (Rel   n) = MV.unsafeRead (machine ^. memory) (machine ^. relBase + n)
+readParamValue :: STMachine s -> Parameter 'ParamRead -> ST s Int
+readParamValue _       (Param ParamImm n) = return n
+readParamValue machine (Param ParamPos n) = MV.unsafeRead (machine ^. memory) n
+readParamValue machine (Param ParamRel n) =
+  MV.unsafeRead (machine ^. memory) (machine ^. relBase + n)
+
+writeParamValue :: STMachine s -> Parameter 'ParamWrite -> Int -> ST s ()
+writeParamValue machine (Param ParamPos n) val = MV.unsafeWrite (machine ^. memory) n val
+writeParamValue machine (Param ParamRel n) val =
+  MV.unsafeWrite (machine ^. memory) (machine ^. relBase + n) val
+writeParamValue _ (Param ParamImm _) _ = error "writeParamValue _ (Param ParamImm _) _" -- TODO: enforce with type system
 
 runBinop
   :: forall s
    . (Int -> Int -> Int)
   -> STMachine s
-  -> Parameter
-  -> Parameter
-  -> Parameter
+  -> Parameter 'ParamRead
+  -> Parameter 'ParamRead
+  -> Parameter 'ParamWrite
   -> ST s (STMachine s)
 runBinop f machine param1 param2 param3 = do
-  x    <- paramValue machine param1
-  y    <- paramValue machine param2
-  dest <- paramValue machine param3
-  MV.unsafeWrite (machine ^. memory) dest (f x y)
+  x <- readParamValue machine param1
+  y <- readParamValue machine param2
+  writeParamValue machine param3 (f x y)
   return $ machine & instrPtr %~ (+ 4)
 
 runCmp
   :: (Int -> Int -> Bool)
   -> STMachine s
-  -> Parameter
-  -> Parameter
-  -> Parameter
+  -> Parameter 'ParamRead
+  -> Parameter 'ParamRead
+  -> Parameter 'ParamWrite
   -> ST s (STMachine s)
 runCmp f machine op1 op2 dest = do
-  result <- (\x y -> if f x y then 1 else 0) <$> paramValue machine op1 <*> paramValue machine op2
-  dest'  <- paramValue machine dest
-  MV.unsafeWrite (machine ^. memory) dest' result
+  result <-
+    (\x y -> if f x y then 1 else 0) <$> readParamValue machine op1 <*> readParamValue machine op2
+  writeParamValue machine dest result
   return $ machine & instrPtr %~ (+ 4)
 
-runJump :: (Int -> Bool) -> STMachine s -> Parameter -> Parameter -> ST s (STMachine s)
+runJump
+  :: (Int -> Bool)
+  -> STMachine s
+  -> Parameter 'ParamRead
+  -> Parameter 'ParamRead
+  -> ST s (STMachine s)
 runJump f machine test dest = do
-  true <- f <$> paramValue machine test
+  true <- f <$> readParamValue machine test
   if true
-    then paramValue machine dest >>= (\d -> return $ machine & instrPtr .~ d)
+    then readParamValue machine dest >>= (\d -> return $ machine & instrPtr .~ d)
     else return $ machine & instrPtr %~ (+ 3)
 
 runInstruction :: STMachine s -> Instruction -> ST s (STMachine s)
@@ -222,18 +238,18 @@ runInstruction machine instr = case instr of
   Add src1 src2 dest -> runBinop (+) machine src1 src2 dest
   Mul src1 src2 dest -> runBinop (*) machine src1 src2 dest
   Input dest         -> do
-    paramValue machine dest
-      >>= (\d -> MV.unsafeWrite (machine ^. memory) d (head (machine ^. inputs)))
+    writeParamValue machine dest (head (machine ^. inputs))
     return $ machine & inputs %~ tail & instrPtr %~ (+ 2)
   Output src -> do
-    i <- paramValue machine src
+    i <- readParamValue machine src
     return $ machine & outputs %~ (i :) & instrPtr %~ (+ 2)
   JumpIfTrue  test dest -> runJump (/= 0) machine test dest
   JumpIfFalse test dest -> runJump (== 0) machine test dest
   LessThan op1 op2 dest -> runCmp (<) machine op1 op2 dest
   Equals   op1 op2 dest -> runCmp (==) machine op1 op2 dest
   AdjustRelBase op ->
-    paramValue machine op >>= (\op' -> return $ machine & relBase %~ (+ op') & instrPtr %~ (+ 2))
+    readParamValue machine op
+      >>= (\op' -> return $ machine & relBase %~ (+ op') & instrPtr %~ (+ 2))
   Halt -> return machine
 
 runNextInstruction :: STMachine s -> ST s (STMachine s)
