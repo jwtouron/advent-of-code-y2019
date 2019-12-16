@@ -28,5 +28,7 @@ main :: IO ()
 main = do
   [day] <- getArgs
   if day == "all"
-    then mapM_ (\(n, io) -> putStrLn ("Day " ++ show n) >> io) allSolutions
+    then do
+      putStrLn $ "Running a total of " ++ show (length allSolutions) ++ " solutions:"
+      mapM_ (\(n, io) -> putStrLn ("Day " ++ show n) >> io) allSolutions
     else snd $ allSolutions !! (read day - 1)
