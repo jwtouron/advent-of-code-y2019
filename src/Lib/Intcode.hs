@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Lib.Intcode
   ( Input(..)
@@ -66,7 +67,12 @@ newMachine program ins =
         InputV2 ins' -> (V.fromList program, ins')
   in  IMachine mem 0 inputs' []
 
-thawFreezeMachine :: (a -> ST s b) -> IMachine a -> ST s (IMachine b)
+type family ThawFreezeMemory s a where
+  ThawFreezeMemory s (STVector s Int) = Vector Int
+  ThawFreezeMemory s (Vector Int) = STVector s Int
+
+thawFreezeMachine
+  :: (a -> ST s (ThawFreezeMemory s a)) -> IMachine a -> ST s (IMachine (ThawFreezeMemory s a))
 thawFreezeMachine f machine =
   IMachine
     <$> f (machine ^. memory)
