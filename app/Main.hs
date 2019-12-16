@@ -9,19 +9,21 @@ import           Lib.Day6                      as Day6
 import           Lib.Day7                      as Day7
 import           Lib.Day8                      as Day8
 import           Lib.Day9                      as Day9
+import           Lib.Day10                     as Day10
 import           System.Environment
 
 allSolutions :: [(Int, IO ())]
 allSolutions =
-  [ (1, Day1.solve)
-  , (2, Day2.solve)
-  , (3, Day3.solve)
-  , (4, Day4.solve)
-  , (5, Day5.solve)
-  , (6, Day6.solve)
-  , (7, Day7.solve)
-  , (8, Day8.solve)
-  , (9, Day9.solve)
+  [ (1 , Day1.solve)
+  , (2 , Day2.solve)
+  , (3 , Day3.solve)
+  , (4 , Day4.solve)
+  , (5 , Day5.solve)
+  , (6 , Day6.solve)
+  , (7 , Day7.solve)
+  , (8 , Day8.solve)
+  , (9 , Day9.solve)
+  , (10, Day10.solve)
   ]
 
 main :: IO ()

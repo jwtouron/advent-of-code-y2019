@@ -58,9 +58,6 @@ data Path = Path { pathHead :: Point, pathLength :: Int, pathPoints :: Map Point
 newPath :: Path
 newPath = Path (0, 0) 0 (Map.singleton (0, 0) 0)
 
-manhattenDistance :: Point -> Point -> Int
-manhattenDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
-
 followInstruction :: Instruction -> Path -> Path
 followInstruction (Instr dir dist) path@Path {..} = foldl' f path points
  where
