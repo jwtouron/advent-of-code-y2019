@@ -16,6 +16,7 @@ module Lib.Intcode
   , runUntil
   , runUntilHalted
   , newMachine
+  , newMachineWithSize
   , isHalted
   )
 where
@@ -26,6 +27,7 @@ import           Control.Lens                   ( (%~)
                                                 , (^.)
                                                 , (.~)
                                                 )
+import           Control.Monad                  ( forM_ )
 import           Control.Monad.ST               ( ST
                                                 , runST
                                                 )
@@ -50,22 +52,47 @@ data Input =
 data IMachine a =
   IMachine { _memory :: a
            , _instrPtr :: Int
+           , _relBase :: Int
            , _inputs :: [Int]
            , _outputs :: [Int]
-           } deriving (Show)
+           }
 
 makeFieldsNoPrefix ''IMachine
+
+instance Show (IMachine (Vector Int)) where
+  show machine =
+    "IMachine {_memory = "
+      ++ show (reverse $ dropWhile (== 0) $ reverse $ V.toList $ machine ^. memory)
+      ++ ", _instrPtr = "
+      ++ show (machine ^. instrPtr)
+      ++ ", _relbase = "
+      ++ show (machine ^. relBase)
+      ++ ", _inputs = "
+      ++ show (machine ^. inputs)
+      ++ ", _outputs = "
+      ++ show (machine ^. outputs)
+      ++ "}"
 
 type STMachine s = IMachine (STMemory s)
 type Machine = IMachine Memory
 
-newMachine :: [Int] -> Input -> Machine
-newMachine program ins =
+newMachineWithSize :: Int -> [Int] -> Input -> Machine
+newMachineWithSize memorySize program ins =
   let (mem, inputs') = case ins of
         InputV1 noun verb ->
-          let (a : _ : _ : xs) = program in (V.fromList (a : noun : verb : xs), [])
-        InputV2 ins' -> (V.fromList program, ins')
-  in  IMachine mem 0 inputs' []
+          let (a : _ : _ : xs) = program in (mkProgram $ a : noun : verb : xs, [])
+        InputV2 ins' -> (mkProgram program, ins')
+  in  IMachine mem 0 0 inputs' []
+ where
+  mkProgram p = if memorySize <= 0
+    then V.fromList p
+    else runST $ do
+      vec <- MV.new memorySize
+      forM_ (zip [0 ..] p) (uncurry (MV.unsafeWrite vec))
+      V.unsafeFreeze vec
+
+newMachine :: [Int] -> Input -> Machine
+newMachine = newMachineWithSize 0
 
 type family ThawFreezeMemory s a where
   ThawFreezeMemory s (STVector s Int) = Vector Int
@@ -77,6 +104,7 @@ thawFreezeMachine f machine =
   IMachine
     <$> f (machine ^. memory)
     <*> pure (machine ^. instrPtr)
+    <*> pure (machine ^. relBase)
     <*> pure (machine ^. inputs)
     <*> pure (machine ^. outputs)
 
@@ -86,7 +114,7 @@ thawMachine = thawFreezeMachine V.thaw
 unsafeFreezeSTMachine :: STMachine s -> ST s Machine
 unsafeFreezeSTMachine = thawFreezeMachine V.unsafeFreeze
 
-data Parameter = Imm Int | Pos Int | Write Int deriving (Show)
+data Parameter = Imm Int | Pos Int | Write Int | Rel Int deriving (Show)
 
 data Instruction =
     Add Parameter Parameter Parameter
@@ -97,6 +125,7 @@ data Instruction =
   | JumpIfFalse Parameter Parameter
   | LessThan Parameter Parameter Parameter
   | Equals Parameter Parameter Parameter
+  | AdjustRelBase Parameter
   | Halt
   deriving (Show)
 
@@ -135,6 +164,7 @@ decodeInstruction mem index = do
         <$> (param c <$> MV.unsafeRead mem (index + 1))
         <*> (param b <$> MV.unsafeRead mem (index + 2))
         <*> (Write <$> MV.unsafeRead mem (index + 3))
+    9  -> AdjustRelBase <$> (param c <$> MV.unsafeRead mem (index + 1))
     99 -> return Halt
     _  -> error ("decodeInstruction: " ++ show (opcode `mod` 100))
  where
@@ -143,12 +173,14 @@ decodeInstruction mem index = do
   param :: Char -> Int -> Parameter
   param '0' = Pos
   param '1' = Imm
+  param '2' = Rel
   param _   = error "param"
 
-paramValue :: STMemory s -> Parameter -> ST s Int
-paramValue _   (Imm   n) = return n
-paramValue mem (Pos   n) = MV.unsafeRead mem n
-paramValue _   (Write n) = return n
+paramValue :: STMachine s -> Parameter -> ST s Int
+paramValue _       (Imm   n) = return n
+paramValue machine (Pos   n) = MV.unsafeRead (machine ^. memory) n
+paramValue _       (Write n) = return n
+paramValue machine (Rel   n) = MV.unsafeRead (machine ^. memory) (machine ^. relBase + n)
 
 runBinop
   :: forall s
@@ -159,9 +191,9 @@ runBinop
   -> Parameter
   -> ST s (STMachine s)
 runBinop f machine param1 param2 param3 = do
-  x    <- paramValue (machine ^. memory) param1
-  y    <- paramValue (machine ^. memory) param2
-  dest <- paramValue (machine ^. memory) param3
+  x    <- paramValue machine param1
+  y    <- paramValue machine param2
+  dest <- paramValue machine param3
   MV.unsafeWrite (machine ^. memory) dest (f x y)
   return $ machine & instrPtr %~ (+ 4)
 
@@ -173,19 +205,16 @@ runCmp
   -> Parameter
   -> ST s (STMachine s)
 runCmp f machine op1 op2 dest = do
-  result <-
-    (\x y -> if f x y then 1 else 0)
-    <$> paramValue (machine ^. memory) op1
-    <*> paramValue (machine ^. memory) op2
-  dest' <- paramValue (machine ^. memory) dest
+  result <- (\x y -> if f x y then 1 else 0) <$> paramValue machine op1 <*> paramValue machine op2
+  dest'  <- paramValue machine dest
   MV.unsafeWrite (machine ^. memory) dest' result
   return $ machine & instrPtr %~ (+ 4)
 
 runJump :: (Int -> Bool) -> STMachine s -> Parameter -> Parameter -> ST s (STMachine s)
 runJump f machine test dest = do
-  true <- f <$> paramValue (machine ^. memory) test
+  true <- f <$> paramValue machine test
   if true
-    then paramValue (machine ^. memory) dest >>= (\d -> return $ machine & instrPtr .~ d)
+    then paramValue machine dest >>= (\d -> return $ machine & instrPtr .~ d)
     else return $ machine & instrPtr %~ (+ 3)
 
 runInstruction :: STMachine s -> Instruction -> ST s (STMachine s)
@@ -193,17 +222,19 @@ runInstruction machine instr = case instr of
   Add src1 src2 dest -> runBinop (+) machine src1 src2 dest
   Mul src1 src2 dest -> runBinop (*) machine src1 src2 dest
   Input dest         -> do
-    paramValue (machine ^. memory) dest
+    paramValue machine dest
       >>= (\d -> MV.unsafeWrite (machine ^. memory) d (head (machine ^. inputs)))
     return $ machine & inputs %~ tail & instrPtr %~ (+ 2)
   Output src -> do
-    i <- paramValue (machine ^. memory) src
+    i <- paramValue machine src
     return $ machine & outputs %~ (i :) & instrPtr %~ (+ 2)
   JumpIfTrue  test dest -> runJump (/= 0) machine test dest
   JumpIfFalse test dest -> runJump (== 0) machine test dest
   LessThan op1 op2 dest -> runCmp (<) machine op1 op2 dest
   Equals   op1 op2 dest -> runCmp (==) machine op1 op2 dest
-  Halt                  -> return machine
+  AdjustRelBase op ->
+    paramValue machine op >>= (\op' -> return $ machine & relBase %~ (+ op') & instrPtr %~ (+ 2))
+  Halt -> return machine
 
 runNextInstruction :: STMachine s -> ST s (STMachine s)
 runNextInstruction machine =
