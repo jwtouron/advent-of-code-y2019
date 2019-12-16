@@ -10,15 +10,21 @@ import           Lib.Day7                      as Day7
 import           Lib.Day8                      as Day8
 import           System.Environment
 
+allSolutions :: [(Int, IO ())]
+allSolutions =
+  [ (1, Day1.solve)
+  , (2, Day2.solve)
+  , (3, Day3.solve)
+  , (4, Day4.solve)
+  , (5, Day5.solve)
+  , (6, Day6.solve)
+  , (7, Day7.solve)
+  , (8, Day8.solve)
+  ]
+
 main :: IO ()
 main = do
-  [day] <- fmap (map read) getArgs
-  case day of
-    1 -> Day1.solve
-    2 -> Day2.solve
-    3 -> Day3.solve
-    4 -> Day4.solve
-    5 -> Day5.solve
-    6 -> Day6.solve
-    7 -> Day7.solve
-    8 -> Day8.solve
+  [day] <- getArgs
+  if day == "all"
+    then mapM_ (\(n, io) -> putStrLn ("Day " ++ show n) >> io) allSolutions
+    else snd $ allSolutions !! (read day - 1)
