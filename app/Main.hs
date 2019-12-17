@@ -1,5 +1,6 @@
 module Main where
 
+import           Test.Hspec                     ( hspec )
 import           Lib.Day1                      as Day1
 import           Lib.Day2                      as Day2
 import           Lib.Day3                      as Day3
@@ -10,27 +11,16 @@ import           Lib.Day7                      as Day7
 import           Lib.Day8                      as Day8
 import           Lib.Day9                      as Day9
 import           Lib.Day10                     as Day10
-import           System.Environment
-
-allSolutions :: [(Int, IO ())]
-allSolutions =
-  [ (1 , Day1.solve)
-  , (2 , Day2.solve)
-  , (3 , Day3.solve)
-  , (4 , Day4.solve)
-  , (5 , Day5.solve)
-  , (6 , Day6.solve)
-  , (7 , Day7.solve)
-  , (8 , Day8.solve)
-  , (9 , Day9.solve)
-  , (10, Day10.solve)
-  ]
 
 main :: IO ()
-main = do
-  [day] <- getArgs
-  if day == "all"
-    then do
-      putStrLn $ "Running a total of " ++ show (length allSolutions) ++ " solutions:"
-      mapM_ (\(n, io) -> putStrLn ("Day " ++ show n) >> io) allSolutions
-    else snd $ allSolutions !! (read day - 1)
+main = hspec $ do
+  Day1.spec
+  Day2.spec
+  Day3.spec
+  Day4.spec
+  Day5.spec
+  Day6.spec
+  Day7.spec
+  Day8.spec
+  Day9.spec
+  Day10.spec

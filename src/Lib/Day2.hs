@@ -1,5 +1,5 @@
 module Lib.Day2
-  ( solve
+  ( spec
   )
 where
 
@@ -26,5 +26,5 @@ solvePart2 program =
         ]
   in  100 * fst xy + snd xy
 
-solve :: IO ()
-solve = input >>= mapM_ print . sequence [assert' 6627023 . solvePart1, assert' 4019 . solvePart2]
+spec :: Spec
+spec = mkSpec input 2 [flip shouldBe 6627023 . solvePart1, flip shouldBe 4019 . solvePart2]

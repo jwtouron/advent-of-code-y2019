@@ -1,5 +1,5 @@
 module Lib.Day4
-  ( solve
+  ( spec
   )
 where
 
@@ -37,8 +37,7 @@ solvePart2 = length
   , s >= 171309 && s <= 643603
   ]
 
-solve :: IO ()
-solve = do
-  print $ assert' 1625 solvePart1
-  print $ assert' 1111 solvePart2
-
+spec :: Spec
+spec = mkSpec (return ())
+              4
+              [flip shouldBe 1625 . const solvePart1, flip shouldBe 1111 . const solvePart2]

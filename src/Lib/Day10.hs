@@ -1,5 +1,5 @@
 module Lib.Day10
-  ( solve
+  ( spec
   )
 where
 
@@ -13,8 +13,10 @@ import qualified Data.Map                      as Map
 import           Data.Ord                       ( comparing )
 import           Data.Ratio
 import qualified Data.Set                      as Set
-import           Lib.Util                       ( assert'
-                                                , manhattenDistance
+import           Lib.Util                       ( manhattenDistance
+                                                , Spec
+                                                , mkSpec
+                                                , shouldBe
                                                 )
 
 parseAsteroids :: String -> [(Int, Int)]
@@ -124,5 +126,5 @@ solvePart2 asteroids = x * 100 + y
   bestAsteroid = bestViewingAsteroid asteroids
   rels         = relationshipsForAsteroid (fst bestAsteroid) asteroids
 
-solve :: IO ()
-solve = input >>= mapM_ print . sequence [assert' 230 . solvePart1, assert' 1205 . solvePart2]
+spec :: Spec
+spec = mkSpec input 10 [flip shouldBe 230 . solvePart1, flip shouldBe 1205 . solvePart2]

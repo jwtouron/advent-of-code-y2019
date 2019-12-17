@@ -4,7 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Lib.Day6
-  ( solve
+  ( spec
   )
 where
 
@@ -21,7 +21,7 @@ import qualified Data.Map.Strict               as Map
 import           Data.Maybe                     ( fromJust )
 import           Data.Set                       ( Set )
 import qualified Data.Set                      as Set
-import           Lib.Util                       ( assert' )
+import           Lib.Util
 
 stringsToMap :: [String] -> Map String (Set String)
 stringsToMap =
@@ -90,5 +90,5 @@ solvePart2 m = length as + length bs - 2
   path2    = map (^. name) $ fromJust $ findPath "YOU" nodeMap
   (as, bs) = dropShared path1 path2
 
-solve :: IO ()
-solve = input >>= mapM_ print . sequence [assert' 315757 . solvePart1, assert' 481 . solvePart2]
+spec :: Spec
+spec = mkSpec input 6 [flip shouldBe 315757 . solvePart1, flip shouldBe 481 . solvePart2]

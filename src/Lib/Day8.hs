@@ -1,5 +1,5 @@
 module Lib.Day8
-  ( solve
+  ( spec
   )
 where
 
@@ -8,14 +8,13 @@ import           Control.Lens                   ( (%~)
                                                 , (^.)
                                                 )
 import           Control.Lens.Tuple
-import           Control.Monad                  ( forM_ )
 import           Data.Char                      ( digitToInt )
 import           Data.List                      ( foldl'
                                                 , minimumBy
                                                 )
 import qualified Data.IntMap.Lazy              as IntMap
 import           Data.Ord                       ( comparing )
-import           Lib.Util                       ( assert' )
+import           Lib.Util
 
 input :: IO [Int]
 input = map digitToInt . init <$> readFile "input/day8.txt"
@@ -39,11 +38,8 @@ solvePart1 xs = (layer ^. _2) * (layer ^. _3)
   f counts 2 = counts & _3 %~ (+ 1)
   f _      _ = error "f"
 
-solvePart2 :: [Int] -> IO ()
-solvePart2 xs = do
-  forM_ [0 .. 5] $ \y -> do
-    forM_ [0 .. 24] $ \x -> putChar $ calcChar x y
-    putStrLn ""
+solvePart2 :: [Int] -> String
+solvePart2 xs = concatMap (\y -> map (\x -> calcChar x y) [0 .. 24] ++ "\n") [0 .. 5]
  where
   layers   = reverse $ splitMany (25 * 6) xs
   pixelMap = foldl'
@@ -54,7 +50,15 @@ solvePart2 xs = do
     let choices = pixelMap IntMap.! (y * 25 + x)
     in  if head (dropWhile (== 2) choices) == 0 then ' ' else 'X'
 
-solve :: IO ()
-solve = do
-  input >>= print . assert' 2480 . solvePart1
-  input >>= solvePart2
+printPart2Solution :: IO ()
+printPart2Solution = input >>= putStrLn . solvePart2
+-- >>> printPart2Solution
+-- XXXX X   XXXX  X    X  X 
+--    X X   XX  X X    X  X 
+--   X   X X XXX  X    XXXX 
+--  X     X  X  X X    X  X 
+-- X      X  X  X X    X  X 
+-- XXXX   X  XXX  XXXX X  X
+
+spec :: Spec
+spec = mkSpec input 8 [(`shouldBe` 2480) . solvePart1]

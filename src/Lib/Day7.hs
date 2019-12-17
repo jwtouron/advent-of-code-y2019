@@ -1,5 +1,5 @@
 module Lib.Day7
-  ( solve
+  ( spec
   )
 where
 
@@ -16,7 +16,7 @@ import           Data.List.Split                ( splitOn )
 import qualified Data.Queue                    as Queue
 import qualified Data.Vector.Unboxed           as V
 import           Lib.Intcode
-import           Lib.Util                       ( assert' )
+import           Lib.Util
 
 input :: IO [Int]
 input = map read . splitOn "," <$> readFile "input/day7.txt"
@@ -51,6 +51,5 @@ solvePart2 program = maximum
   shouldStop :: Machine -> Bool
   shouldStop = (||) <$> isHalted <*> needsInput
 
-solve :: IO ()
-solve =
-  input >>= mapM_ print . sequence [assert' 13848 . solvePart1, assert' 12932154 . solvePart2]
+spec :: Spec
+spec = mkSpec input 7 [flip shouldBe 13848 . solvePart1, flip shouldBe 12932154 . solvePart2]

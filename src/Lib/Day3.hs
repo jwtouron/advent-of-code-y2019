@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
+
 module Lib.Day3
-  ( solve
+  ( spec
   )
 where
 
@@ -99,5 +100,5 @@ solvePart2 :: ([Instruction], [Instruction]) -> Int
 solvePart2 iss = snd $ minimumBy (comparing snd) $ Map.assocs intersections
   where intersections = uncurry instructionIntersections iss
 
-solve :: IO ()
-solve = input >>= mapM_ print . sequence [assert' 293 . solvePart1, assert' 27306 . solvePart2]
+spec :: Spec
+spec = mkSpec input 3 [flip shouldBe 293 . solvePart1, flip shouldBe 27306 . solvePart2]

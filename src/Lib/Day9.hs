@@ -1,5 +1,5 @@
 module Lib.Day9
-  ( solve
+  ( spec
   )
 where
 
@@ -7,7 +7,7 @@ import           Control.Lens                   ( (^.) )
 import           Data.List.Split                ( splitOn )
 import qualified Data.Queue                    as Queue
 import           Lib.Intcode
-import           Lib.Util                       ( assert' )
+import           Lib.Util
 
 input :: IO [Int]
 input = map read . splitOn "," <$> readFile "input/day9.txt"
@@ -20,6 +20,5 @@ solvePart2 :: [Int] -> Int
 solvePart2 program =
   Queue.front $ runUntilHalted (newMachineWithSize 10000 program (InputV2 [2])) ^. outputs
 
-solve :: IO ()
-solve =
-  input >>= mapM_ print . sequence [assert' 2745604242 . solvePart1, assert' 51135 . solvePart2]
+spec :: Spec
+spec = mkSpec input 9 [flip shouldBe 2745604242 . solvePart1, flip shouldBe 51135 . solvePart2]
