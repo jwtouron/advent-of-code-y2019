@@ -34,6 +34,8 @@ import           Control.Monad                  ( forM_ )
 import           Control.Monad.ST               ( ST
                                                 , runST
                                                 )
+import           Data.Queue                     ( Queue )
+import qualified Data.Queue                    as Queue
 import           Data.Vector.Unboxed            ( Vector )
 import qualified Data.Vector.Unboxed           as V
 import           Data.Vector.Unboxed.Mutable    ( STVector )
@@ -56,8 +58,8 @@ data IMachine a =
   IMachine { _memory :: a
            , _instrPtr :: Int
            , _relBase :: Int
-           , _inputs :: [Int]
-           , _outputs :: [Int]
+           , _inputs :: Queue Int
+           , _outputs :: Queue Int
            }
 
 makeFieldsNoPrefix ''IMachine
@@ -85,7 +87,7 @@ newMachineWithSize memorySize program ins =
         InputV1 noun verb ->
           let (a : _ : _ : xs) = program in (mkProgram $ a : noun : verb : xs, [])
         InputV2 ins' -> (mkProgram program, ins')
-  in  IMachine mem 0 0 inputs' []
+  in  IMachine mem 0 0 (Queue.fromList inputs') Queue.empty
  where
   mkProgram p = if memorySize <= 0
     then V.fromList p
@@ -238,11 +240,11 @@ runInstruction machine instr = case instr of
   Add src1 src2 dest -> runBinop (+) machine src1 src2 dest
   Mul src1 src2 dest -> runBinop (*) machine src1 src2 dest
   Input dest         -> do
-    writeParamValue machine dest (head (machine ^. inputs))
-    return $ machine & inputs %~ tail & instrPtr %~ (+ 2)
+    writeParamValue machine dest (Queue.front $ machine ^. inputs)
+    return $ machine & inputs %~ Queue.pop & instrPtr %~ (+ 2)
   Output src -> do
     i <- readParamValue machine src
-    return $ machine & outputs %~ (i :) & instrPtr %~ (+ 2)
+    return $ machine & outputs %~ Queue.push i & instrPtr %~ (+ 2)
   JumpIfTrue  test dest -> runJump (/= 0) machine test dest
   JumpIfFalse test dest -> runJump (== 0) machine test dest
   LessThan op1 op2 dest -> runCmp (<) machine op1 op2 dest
