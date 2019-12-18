@@ -18,6 +18,7 @@ module Lib.Intcode
   , newMachine
   , isHalted
   , clearOutputs
+  , needsInput
   )
 where
 
@@ -176,3 +177,8 @@ runUntilHalted = runUntil isHalted
 
 clearOutputs :: Machine -> Machine
 clearOutputs = (& outputs .~ Queue.empty)
+
+needsInput :: Machine -> Bool
+needsInput machine =
+  let opcode = (machine ^. memory) IntMap.! (machine ^. instrPtr) `mod` 100
+  in  opcode == 3 && Queue.null (machine ^. inputs)

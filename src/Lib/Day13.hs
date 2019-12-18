@@ -32,11 +32,6 @@ solvePart1 program = Set.size $ go (newMachine program []) Set.empty
     | otherwise
     = go (runUntil ((||) <$> has3Outputs <*> isHalted) machine) tiles
 
-needsInput :: Machine -> Bool
-needsInput machine =
-  let opcode = (machine ^. memory) IntMap.! (machine ^. instrPtr) `mod` 100
-  in  opcode == 3 && Queue.null (machine ^. inputs)
-
 data Game =
   Game { ball :: Maybe Int
        , paddle :: Maybe Int
