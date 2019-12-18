@@ -14,7 +14,7 @@ import           Data.List                      ( foldl'
                                                 )
 import           Data.List.Split                ( splitOn )
 import qualified Data.Queue                    as Queue
-import qualified Data.Vector.Unboxed           as V
+import qualified Data.IntMap                   as IntMap
 import           Lib.Intcode
 import           Lib.Util
 
@@ -29,7 +29,7 @@ solvePart1 program = maximum $ map f (permutations [0 .. 4])
 
 needsInput :: Machine -> Bool
 needsInput machine =
-  let opcode = ((machine ^. memory) V.! (machine ^. instrPtr)) `mod` 100
+  let opcode = ((machine ^. memory) IntMap.! (machine ^. instrPtr)) `mod` 100
   in  opcode == 3 && Queue.null (machine ^. inputs)
 
 solvePart2 :: [Int] -> Int

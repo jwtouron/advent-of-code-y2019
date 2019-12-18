@@ -8,7 +8,7 @@ import           Data.Foldable                  ( toList )
 import           Data.List.Split                ( splitOn )
 import qualified Data.Set                      as Set
 import qualified Data.Queue                    as Queue
-import qualified Data.Vector.Unboxed           as Vec
+import qualified Data.IntMap                   as IntMap
 import           Lib.Intcode
 import           Lib.Util
 
@@ -34,7 +34,7 @@ solvePart1 program = Set.size $ go (newMachine program (InputV2 [])) Set.empty
 
 needsInput :: Machine -> Bool
 needsInput machine =
-  let opcode = (machine ^. memory) Vec.! (machine ^. instrPtr) `mod` 100
+  let opcode = (machine ^. memory) IntMap.! (machine ^. instrPtr) `mod` 100
   in  opcode == 3 && Queue.null (machine ^. inputs)
 
 data Game =
@@ -44,8 +44,7 @@ data Game =
        } deriving (Show)
 
 solvePart2 :: [Int] -> Int
-solvePart2 program = go (Game Nothing Nothing 0)
-                        (newMachineWithSize 10000 (2 : tail program) (InputV2 []))
+solvePart2 program = go (Game Nothing Nothing 0) (newMachine (2 : tail program) (InputV2 []))
  where
   go game machine
     | isHalted machine
