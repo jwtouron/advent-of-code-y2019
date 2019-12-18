@@ -8,7 +8,6 @@ import           Data.Foldable                  ( toList )
 import           Data.List.Split                ( splitOn )
 import qualified Data.Set                      as Set
 import qualified Data.Queue                    as Queue
-import qualified Data.IntMap                   as IntMap
 import           Lib.Intcode
 import           Lib.Util
 
@@ -60,7 +59,7 @@ solvePart2 program = go (Game Nothing Nothing 0) (newMachine (2 : tail program) 
           machine' = clearOutputs machine
       in  go game' machine'
     | otherwise
-    = go game (runUntil (\m -> needsInput m || has3Outputs m || isHalted m) machine)
+    = go game (runUntil (or . sequence [needsInput, has3Outputs, isHalted]) machine)
 
 spec :: Spec
 spec = mkSpec input 13 [(`shouldBe` 253) . solvePart1, (`shouldBe` 12263) . solvePart2]
