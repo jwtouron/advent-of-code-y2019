@@ -21,6 +21,7 @@ module Lib.Intcode
   , newMachine
   , newMachineWithSize
   , isHalted
+  , clearOutputs
   )
 where
 
@@ -70,7 +71,7 @@ instance Show (IMachine (Vector Int)) where
       ++ show (reverse $ dropWhile (== 0) $ reverse $ V.toList $ machine ^. memory)
       ++ ", _instrPtr = "
       ++ show (machine ^. instrPtr)
-      ++ ", _relbase = "
+      ++ ", _relBase = "
       ++ show (machine ^. relBase)
       ++ ", _inputs = "
       ++ show (machine ^. inputs)
@@ -269,3 +270,6 @@ runUntil p machine = runST $ thawMachine machine >>= loop >>= unsafeFreezeSTMach
 
 runUntilHalted :: Machine -> Machine
 runUntilHalted = runUntil isHalted
+
+clearOutputs :: Machine -> Machine
+clearOutputs = (& outputs .~ Queue.empty)
