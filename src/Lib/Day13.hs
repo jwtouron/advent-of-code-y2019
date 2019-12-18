@@ -19,7 +19,7 @@ has3Outputs :: Machine -> Bool
 has3Outputs machine = Queue.length (machine ^. outputs) == 3
 
 solvePart1 :: [Int] -> Int
-solvePart1 program = Set.size $ go (newMachine program (InputV2 [])) Set.empty
+solvePart1 program = Set.size $ go (newMachine program []) Set.empty
  where
   go machine tiles
     | isHalted machine
@@ -44,7 +44,7 @@ data Game =
        } deriving (Show)
 
 solvePart2 :: [Int] -> Int
-solvePart2 program = go (Game Nothing Nothing 0) (newMachine (2 : tail program) (InputV2 []))
+solvePart2 program = go (Game Nothing Nothing 0) (newMachine (2 : tail program) [])
  where
   go game machine
     | isHalted machine

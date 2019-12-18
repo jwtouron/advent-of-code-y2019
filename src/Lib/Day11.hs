@@ -76,7 +76,7 @@ runRobot input program = go robot machine
       in  go robot' machine'
     | otherwise
     = go robot (runUntil ((||) <$> has2Outputs <*> isHalted) machine)
-  machine = newMachine program (InputV2 [input])
+  machine = newMachine program [input]
   robot   = newRobot
 
 solvePart1 :: [Int] -> Int

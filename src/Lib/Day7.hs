@@ -25,7 +25,7 @@ solvePart1 :: [Int] -> Int
 solvePart1 program = maximum $ map f (permutations [0 .. 4])
  where
   f = head . foldl' g [0]
-  g outs x = toList $ runUntilHalted (newMachine program (InputV2 (x : outs))) ^. outputs
+  g outs x = toList $ runUntilHalted (newMachine program (x : outs)) ^. outputs
 
 needsInput :: Machine -> Bool
 needsInput machine =
@@ -34,7 +34,7 @@ needsInput machine =
 
 solvePart2 :: [Int] -> Int
 solvePart2 program = maximum
-  $ map (loop 0 . map (\p -> newMachine program (InputV2 [p]))) (permutations [5 .. 9])
+  $ map (loop 0 . map (\p -> newMachine program [p])) (permutations [5 .. 9])
  where
   loop :: Int -> [Machine] -> Int
   loop seed machines =

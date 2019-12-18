@@ -12,8 +12,11 @@ import           Lib.Util
 input :: IO [Int]
 input = map read . splitOn "," <$> readFile "input/day2.txt"
 
+addInputs :: Int -> Int -> [Int] -> [Int]
+addInputs noun verb (x : _ : _ : xs) = x : noun : verb : xs
+
 solvePart1 :: [Int] -> Int
-solvePart1 program = (runUntilHalted (newMachine program (InputV1 12 2)) ^. memory) IntMap.! 0
+solvePart1 program = (runUntilHalted (newMachine (addInputs 12 2 program) []) ^. memory) IntMap.! 0
 
 solvePart2 :: [Int] -> Int
 solvePart2 program =
@@ -21,7 +24,7 @@ solvePart2 program =
         [ (x, y)
         | x <- [0 .. 99]
         , y <- [0 .. 99]
-        , let z = (runUntilHalted (newMachine program (InputV1 x y)) ^. memory) IntMap.! 0
+        , let z = (runUntilHalted (newMachine (addInputs x y program) []) ^. memory) IntMap.! 0
         , z == 19690720
         ]
   in  100 * fst xy + snd xy

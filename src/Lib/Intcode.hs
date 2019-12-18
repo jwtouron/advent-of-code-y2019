@@ -8,8 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Lib.Intcode
-  ( Input(..)
-  , Machine
+  ( Machine
   , memory
   , instrPtr
   , inputs
@@ -34,13 +33,6 @@ import           Data.IntMap.Strict             ( IntMap )
 import qualified Data.IntMap.Strict            as IntMap
 
 type Memory = IntMap Int
-type Noun = Int
-type Verb = Int
-
-data Input =
-    InputV1 Noun Verb
-  | InputV2 [Int]
-  deriving (Show)
 
 data Machine =
   Machine { _memory :: Memory
@@ -52,14 +44,9 @@ data Machine =
 
 makeFieldsNoPrefix ''Machine
 
-newMachine :: [Int] -> Input -> Machine
+newMachine :: [Int] -> [Int] -> Machine
 newMachine program ins =
-  let (mem, inputs') = case ins of
-        InputV1 noun verb ->
-          let (a : _ : _ : xs) = program in (mkProgram $ a : noun : verb : xs, [])
-        InputV2 ins' -> (mkProgram program, ins')
-  in  Machine mem 0 0 (Queue.fromList inputs') Queue.empty
-  where mkProgram p = IntMap.fromList $ zip [0 ..] p
+  Machine (IntMap.fromList $ zip [0 ..] program) 0 0 (Queue.fromList ins) Queue.empty
 
 data ParameterRW = ParamRead | ParamWrite deriving (Show)
 data ParameterMode = ParamPos | ParamImm | ParamRel deriving (Show)
