@@ -263,8 +263,9 @@ isHalted :: Machine -> Bool
 isHalted machine = (machine ^. memory) V.! (machine ^. instrPtr) == 99
 
 runUntil :: (Machine -> Bool) -> Machine -> Machine
-runUntil p machine = runST $ thawMachine machine >>= loop >>= unsafeFreezeSTMachine
+runUntil p = until p f
  where
+  f machine = runST $ thawMachine machine >>= loop >>= unsafeFreezeSTMachine
   loop :: STMachine s -> ST s (STMachine s)
   loop m = ifM (p <$> unsafeFreezeSTMachine m) (return m) (runNextInstruction m >>= loop)
 
