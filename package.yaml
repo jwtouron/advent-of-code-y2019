@@ -26,6 +26,8 @@ dependencies:
 - containers >= 0.6 && < 0.7
 - lens >= 4.18 && < 4.19
 - hspec >= 2.7 && < 2.8
+- search-algorithms >= 0.3 && < 0.4
+- mtl >= 2.2 && < 2.3
 
 library:
   source-dirs: src
