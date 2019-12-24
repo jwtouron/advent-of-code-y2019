@@ -16,6 +16,7 @@ import           Lib.Day12                     as Day12
 import           Lib.Day13                     as Day13
 import           Lib.Day14                     as Day14
 import           Lib.Day15                     as Day15
+import           Lib.Day16                     as Day16
 
 main :: IO ()
 main = hspec $ do
@@ -34,3 +35,4 @@ main = hspec $ do
   Day13.spec
   Day14.spec
   Day15.spec
+  Day16.spec
