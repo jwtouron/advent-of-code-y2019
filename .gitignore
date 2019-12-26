@@ -1,3 +1,5 @@
 .stack-work/
 advent-of-code-y2019.cabal
 *~
+stack.yaml.lock
+
