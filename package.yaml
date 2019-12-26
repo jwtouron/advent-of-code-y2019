@@ -28,6 +28,7 @@ dependencies:
 - hspec >= 2.7 && < 2.8
 - search-algorithms >= 0.3 && < 0.4
 - mtl >= 2.2 && < 2.3
+- MissingH >= 1.4 && < 1.5
 
 library:
   source-dirs: src
