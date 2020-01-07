@@ -18,23 +18,30 @@ import           Lib.Day14                     as Day14
 import           Lib.Day15                     as Day15
 import           Lib.Day16                     as Day16
 import           Lib.Day17                     as Day17
+import           Lib.Day18                     as Day18
 
 main :: IO ()
-main = hspec $ do
-  Day1.spec
-  Day2.spec
-  Day3.spec
-  Day4.spec
-  Day5.spec
-  Day6.spec
-  Day7.spec
-  Day8.spec
-  Day9.spec
-  Day10.spec
-  Day11.spec
-  Day12.spec
-  Day13.spec
-  Day14.spec
-  Day15.spec
-  Day16.spec
-  Day17.spec
+main = do
+  Day18.input >>= putStrLn . show . Day18.solvePart1
+  Day18.input >>= putStrLn . show . Day18.solvePart2 --
+--  print $ Day18.solvePart1''
+  return ()
+
+  -- hspec $ do
+  --   Day1.spec
+  --   Day2.spec
+  --   Day3.spec
+  --   Day4.spec
+  --   Day5.spec
+  --   Day6.spec
+  --   Day7.spec
+  --   Day8.spec
+  --   Day9.spec
+  --   Day10.spec
+  --   Day11.spec
+  --   Day12.spec
+  --   Day13.spec
+  --   Day14.spec
+  --   Day15.spec
+  --   Day16.spec
+  --   Day17.spec
