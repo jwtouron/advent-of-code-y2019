@@ -166,7 +166,9 @@ mkCasedChar c | isLower c = LowerCC c
 
 charSetToList :: forall  a . HasOffset a => CharSet a -> [CasedChar a]
 charSetToList cs = foldr
-  (\i cs' -> if testBit cs i then mkCasedChar (chr (offset @a + i)) : cs' else cs')
+  (\i cs' ->
+    if testBit cs i then mkCasedChar (chr (offset @a + i)) : cs' else cs'
+  )
   []
   [0 .. 25]
 
@@ -191,26 +193,41 @@ makeFieldsNoPrefix ''Vault
 parseVaultDesc :: String -> Vault
 parseVaultDesc vaultDesc = vault
  where
-  vault = foldl' f (Vault Map.empty 0 Map.empty 0 Set.empty) . zip [0 ..] . lines $ vaultDesc
+  vault =
+    foldl' f (Vault Map.empty 0 Map.empty 0 Set.empty)
+      . zip [0 ..]
+      . lines
+      $ vaultDesc
   f s (y, l) = foldl' (g y) s $ zip [0 ..] l
   g y v (x, c) =
     let v' = case c of
           _ | isLower c ->
             let cc = mkCasedCharLower c
-            in  v & (keys %~ charSetInsert cc) & (keyLocs %~ Map.insert cc (x, y))
+            in  v
+                  & (keys %~ charSetInsert cc)
+                  & (keyLocs %~ Map.insert cc (x, y))
           _ | isUpper c -> v & doors %~ charSetInsert (mkCasedCharUpper c)
           '@'           -> v & startLocs %~ Set.insert (x, y)
           _             -> v
     in  v' & locChars %~ Map.insert (x, y) c
 
 convertVaultToP2 :: Vault -> Vault
-convertVaultToP2 vault = vault' & startLocs .~ Set.fromList (map fst newStartLocs)
+convertVaultToP2 vault = vault' & startLocs .~ Set.fromList
+  (map fst newStartLocs)
  where
-  vault'   = foldl' (\v (l, c) -> v & locChars %~ Map.insert l c) vault $ newWalls ++ newStartLocs
-  (x, y)   = vault ^. startLocs . to Set.toList . to head
-  newWalls = [ (loc, '#') | loc <- [(x, y), (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)] ]
+  vault' =
+    foldl' (\v (l, c) -> v & locChars %~ Map.insert l c) vault
+      $  newWalls
+      ++ newStartLocs
+  (x, y) = vault ^. startLocs . to Set.toList . to head
+  newWalls =
+    [ (loc, '#')
+    | loc <- [(x, y), (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+    ]
   newStartLocs =
-    [ (loc, '@') | loc <- [(x + 1, y + 1), (x - 1, y - 1), (x + 1, y - 1), (x - 1, y + 1)] ]
+    [ (loc, '@')
+    | loc <- [(x + 1, y + 1), (x - 1, y - 1), (x + 1, y - 1), (x - 1, y + 1)]
+    ]
 
 data SmallSearchState =
   SmallSearchState { _location :: !Location
@@ -227,13 +244,18 @@ findAllKeyPaths vault loc =
     $ Set.toList
     $ go (Set.singleton loc) (Set.singleton startState) Set.empty
  where
-  go :: Set Location -> Set SmallSearchState -> Set SmallSearchState -> Set SmallSearchState
+  go
+    :: Set Location
+    -> Set SmallSearchState
+    -> Set SmallSearchState
+    -> Set SmallSearchState
   go visited frontier result
     | Set.null frontier
     = result
     | otherwise
-    = let frontierNeighbors              = concatMap neighbors $ Set.toList frontier
-          (visited', frontier', result') = foldl' g (visited, Set.empty, result) frontierNeighbors
+    = let frontierNeighbors = concatMap neighbors $ Set.toList frontier
+          (visited', frontier', result') =
+              foldl' g (visited, Set.empty, result) frontierNeighbors
       in  go visited' frontier' result'
    where
     g (visited, frontier, result) ss =
@@ -247,7 +269,9 @@ findAllKeyPaths vault loc =
     neighbors ss =
       [ ss
           & (location .~ n)
-          & (doors %~ \ds -> if isUpper c then charSetInsert (mkCasedCharUpper c) ds else ds)
+          & (doors %~ \ds ->
+              if isUpper c then charSetInsert (mkCasedCharUpper c) ds else ds
+            )
           & (distance %~ (+ 1))
       | let loc = ss ^. location
       , let (x, y) = loc
@@ -275,7 +299,15 @@ data LargeSearchState =
 makeFieldsNoPrefix ''LargeSearchState
 
 instance Eq LargeSearchState where
-  s1 == s2 = s1 ^. locations == s2 ^. locations && s1 ^. keysCollected == s2 ^. keysCollected
+  s1 == s2 =
+    s1
+      ^. locations
+      == s2
+      ^. locations
+      && s1
+      ^. keysCollected
+      == s2
+      ^. keysCollected
 
 instance Ord LargeSearchState where
   s1 `compare` s2 =
@@ -285,10 +317,11 @@ instance Ord LargeSearchState where
 type LargeSearchCache = LMap Location (LMap Location [(Doors, Int)])
 
 findAllKeys :: Vault -> (Int, [LargeSearchState])
-findAllKeys vault = fromJust $ flip evalState Map.empty $ dijkstraM neighbors
-                                                                    cost
-                                                                    atGoal
-                                                                    startState
+findAllKeys vault = fromJust $ flip evalState Map.empty $ dijkstraM
+  neighbors
+  cost
+  atGoal
+  startState
  where
   neighbors :: LargeSearchState -> State LargeSearchCache [LargeSearchState]
   neighbors st = do
@@ -305,32 +338,46 @@ findAllKeys vault = fromJust $ flip evalState Map.empty $ dijkstraM neighbors
       guard $ md /= inf
       return
         $ st
-        & (locations %~ Set.insert (stateLoc & current .~ loc') . Set.delete stateLoc)
+        & (  locations
+          %~ Set.insert (stateLoc & current .~ loc')
+          .  Set.delete stateLoc
+          )
         & (keysCollected %~ \kc -> if Set.member loc' (vault ^. startLocs)
             then kc
-            else charSetInsert (mkCasedCharLower (vault ^. locChars . to (Map.! loc'))) kc
+            else charSetInsert
+              (mkCasedCharLower (vault ^. locChars . to (Map.! loc')))
+              kc
           )
         & (distance %~ (+ round md))
-    minDistance :: LargeSearchCache -> Location -> Location -> CharSet 'Lower -> Double
-    minDistance cache l1 l2 ks = maybe inf (maybe inf f . LMap.lookup l2) $ LMap.lookup l1 cache
+    minDistance
+      :: LargeSearchCache -> Location -> Location -> CharSet 'Lower -> Double
+    minDistance cache l1 l2 ks =
+      maybe inf (maybe inf f . LMap.lookup l2) $ LMap.lookup l1 cache
      where
       f = foldl'
-        (\minDist (drs, dist) -> if charSetIsSubset drs ks && fromIntegral dist < minDist
-          then fromIntegral dist
-          else minDist
+        (\minDist (drs, dist) ->
+          if charSetIsSubset drs ks && fromIntegral dist < minDist
+            then fromIntegral dist
+            else minDist
         )
         inf
     updateCache cache =
-      foldl' (\c l -> if LMap.member l c then c else LMap.insert l (findAllKeyPaths vault l) c)
-             cache
+      foldl'
+          (\c l -> if LMap.member l c
+            then c
+            else LMap.insert l (findAllKeyPaths vault l) c
+          )
+          cache
         $ map (^. current)
         $ Set.toList (st ^. locations)
   cost :: LargeSearchState -> LargeSearchState -> State LargeSearchCache Int
   cost s1 s2 = return $ s2 ^. distance - s1 ^. distance
   atGoal :: LargeSearchState -> State LargeSearchCache Bool
   atGoal s = return $ s ^. keysCollected == vault ^. keys
-  startState =
-    LargeSearchState (Set.fromList [ LSSLocation l l | l <- Set.toList (vault ^. startLocs) ]) 0 0
+  startState = LargeSearchState
+    (Set.fromList [ LSSLocation l l | l <- Set.toList (vault ^. startLocs) ])
+    0
+    0
   inf = (1 / 0) :: Double
 
 solvePart1 :: String -> Int
